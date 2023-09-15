@@ -4,6 +4,7 @@ use getopts::{Options, Occur, HasArg};
 use std::path::Path;
 use std::fs::File;
 use image::io::Reader as ImageReader;
+use image::imageops::FilterType;
 
 mod segment;
 mod image_process;
@@ -237,30 +238,32 @@ fn main() {
     }
 
     let dyn_image = ImageReader::open(&input).expect("Unexpected error while reading input file").decode().unwrap();
-    let stt_image = dyn_image
-                    .brighten(brighten)
-                    .adjust_contrast(contrast)
-                    .grayscale()
-                    .into_luma8();
 
     if width == 0 {
-        let aspect_ratio = (stt_image.width() as f32) / (stt_image.height() as f32);
+        let aspect_ratio = (dyn_image.width() as f32) / (dyn_image.height() as f32);
         width = ((height as f32) * aspect_ratio).floor() as u32;
     }
 
     if height == 0 {
-        let iaspect_ratio = (stt_image.height() as f32) / (stt_image.width() as f32);
+        let iaspect_ratio = (dyn_image.height() as f32) / (dyn_image.width() as f32);
         height = ((width as f32) * iaspect_ratio).floor() as u32;
     }
 
     let width = width;
     let height = height;
 
-    let segment_info = SegmentInfo::generate(stt_image.width(), stt_image.height(), width, height);
+    let stt_image = dyn_image
+                    .brighten(brighten)
+                    .adjust_contrast(contrast)
+                    .grayscale()
+                    .resize_exact(width, height, FilterType::Nearest)
+                    .into_luma8();
+
+    //let segment_info = SegmentInfo::generate(stt_image.width(), stt_image.height(), width, height);
 
     let mut matrix = Matrix::<f32>::new(width, height, 0.0);
 
-    generate_matrix(stt_image, &mut matrix, segment_info);
+    generate_matrix(stt_image, &mut matrix); //, segment_info);
 
     print_output(matrix, fmt_str, fmt_ln_str, chars, output);
 }

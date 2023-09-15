@@ -3,6 +3,7 @@ use image::{GrayImage};
 use crate::segment::SegmentInfo;
 use crate::matrix::Matrix;
 
+/*
 pub fn generate_matrix(image: GrayImage, matrix: &mut Matrix<f32>, segment_info: SegmentInfo){
     for i in 0..segment_info.get_height(){
         for j in 0..segment_info.get_width(){
@@ -25,4 +26,13 @@ pub fn take_average(image: &GrayImage, x1: u32, x2: u32, y1: u32, y2: u32) -> f3
     }
     let temp = val / (cnt as f32);
     return temp / 255.0; // a number between 0 and 1
+}
+*/
+
+pub fn generate_matrix(image: GrayImage, matrix: &mut Matrix<f32>){
+    for x in 0..image.width(){
+        for y in 0..image.height(){
+            matrix.set(y, x, (image.get_pixel(x, y).0[0] as f32)/255.0);
+        }
+    }
 }
