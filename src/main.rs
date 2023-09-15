@@ -20,7 +20,12 @@ const PROGDESC: &'static str = "A simple program that converts images into ascii
 
 pub enum ProgType{
     TXT,
-    HTML,
+    BRAILE,
+}
+
+pub enum AlgType{
+    KERNEL,
+    LEGACY,
 }
 
 fn print_help(progname: String, parser: Options){
@@ -28,6 +33,7 @@ fn print_help(progname: String, parser: Options){
 }
 
 fn parse_args(args: Vec<String>) -> Result<(ProgType,
+                                            AlgType,
                                             String, 
                                             String,
                                             f32,
@@ -40,7 +46,8 @@ fn parse_args(args: Vec<String>) -> Result<(ProgType,
     let progname = args[0].clone();
     let mut parser = Options::new();
     parser.optflag("h", "help", "display this help message");
-    parser.opt("t", "type", "type of output", "[TXT|HTML]", HasArg::Yes, Occur::Optional);
+    parser.opt("t", "type", "type of output", "[TXT|BRAILE]", HasArg::Yes, Occur::Optional);
+    parser.opt("T", "op-type", "how to process the image", "[KERNEL|LEGACY]", HasArg::Yes, Occur::Optional);
     parser.opt("f", "fmt", "format string for each character", "FORMATSTR", HasArg::Yes, Occur::Optional);
     parser.opt("F", "fmtln", "format string for each line", "FORMATSTR", HasArg::Yes, Occur::Optional);
     parser.opt("c", "contrast", "contrast level", "FLOAT", HasArg::Yes, Occur::Optional);
@@ -54,6 +61,7 @@ fn parse_args(args: Vec<String>) -> Result<(ProgType,
     let matches = parser.parse(args[1..].into_iter()).unwrap();
 
     let mut out_type: ProgType = ProgType::TXT;
+    let mut alg_type: AlgType = AlgType::LEGACY;
     let mut fmt_str: String = String::from("{}");
     let mut fmt_ln_str: String = String::from("{}\n");
     let mut contrast: f32 = 0.0;
@@ -73,14 +81,30 @@ fn parse_args(args: Vec<String>) -> Result<(ProgType,
         let temp: String = match matches.opt_str("t"){
             Some(s) => s,
             None => {
-                println!("-t option expects an argument: TXT | HTML");
+                println!("-t option expects an argument: TXT | BRAILE");
                 return Err(());
             }
-        };
-        if temp == "TXT" { out_type = ProgType::TXT; }
-        else if temp == "HTML" { out_type = ProgType::HTML; }
+        }.trim().to_lowercase();
+        if temp == "txt" { out_type = ProgType::TXT; }
+        else if temp == "braile" { out_type = ProgType::BRAILE; }
         else {
-            println!("-t option expects an argument: TXT | HTML");
+            println!("-t option expects an argument: TXT | BRAILE");
+            return Err(());
+        }
+    }
+
+    if matches.opt_present("T"){
+        let temp: String = match matches.opt_str("T"){
+            Some(s) => s,
+            None => {
+                println!("-T option expects an argument: KERNEL | LEGACY");
+                return Err(());
+            }
+        }.trim().to_lowercase();
+        if temp == "kernel" { alg_type = AlgType::KERNEL; }
+        else if temp == "legacy" { alg_type = AlgType::LEGACY; }
+        else {
+            println!("-T option expects an argument: KERNEL | LEGACY");
             return Err(());
         }
     }
@@ -215,13 +239,14 @@ fn parse_args(args: Vec<String>) -> Result<(ProgType,
     }
     let input = matches.free[0].clone();
 
-    Ok((out_type, fmt_str, fmt_ln_str, contrast, brighten, width, height, output, chars, input))
+    Ok((out_type, alg_type, fmt_str, fmt_ln_str, contrast, brighten, width, height, output, chars, input))
 }
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let (
         _out_type,
+        alg_type,
         fmt_str,
         fmt_ln_str,
         contrast,
@@ -252,18 +277,36 @@ fn main() {
     let width = width;
     let height = height;
 
-    let stt_image = dyn_image
-                    .brighten(brighten)
-                    .adjust_contrast(contrast)
-                    .grayscale()
-                    .resize_exact(width, height, FilterType::Nearest)
-                    .into_luma8();
+    match alg_type {
+        AlgType::LEGACY => {
+            let stt_image = dyn_image
+                .brighten(brighten)
+                .adjust_contrast(contrast)
+                .grayscale()
+                .into_luma8();
 
-    //let segment_info = SegmentInfo::generate(stt_image.width(), stt_image.height(), width, height);
 
-    let mut matrix = Matrix::<f32>::new(width, height, 0.0);
+            let segment_info = SegmentInfo::generate(stt_image.width(), stt_image.height(), width, height);
 
-    generate_matrix(stt_image, &mut matrix); //, segment_info);
+            let mut matrix = Matrix::<f32>::new(width, height, 0.0);
 
-    print_output(matrix, fmt_str, fmt_ln_str, chars, output);
+            generate_matrix_legacy(stt_image, &mut matrix, segment_info);
+
+            print_output(matrix, fmt_str, fmt_ln_str, chars, output);
+        },
+        AlgType::KERNEL => {
+            let stt_image = dyn_image
+                .brighten(brighten)
+                .adjust_contrast(contrast)
+                .grayscale()
+                .resize_exact(width, height, FilterType::Gaussian)
+                .into_luma8();
+
+            let mut matrix = Matrix::<f32>::new(width, height, 0.0);
+
+            generate_matrix(stt_image, &mut matrix); //, segment_info);
+
+            print_output(matrix, fmt_str, fmt_ln_str, chars, output);
+        }
+    }
 }

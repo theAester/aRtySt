@@ -2,21 +2,20 @@ use std::fs::File;
 use std::io::{Read, Write};
 use crate::matrix::Matrix;
 
-const DEFAULT_CHARS: [char; 39] = [' ','.','`','\'','-','~','+','^',':',';','>','<','?',')','(','|',']','[','}','{','\\','/',
-                                        'i','1','l','L','0','O','m','q','d','k','#','W','%','&','B','@','$'];
-
 pub fn print_output(matrix: Matrix<f32>, fmt_str: String, fmt_ln_str: String, chars: Option<File>, output: Option<File>){
     // array of characters, arranged in increasing brightness
     let char_array: Vec<char> = match chars{
         Some(mut f)=>{
             let mut temp = String::new();
             f.read_to_string(&mut temp).unwrap();
+            let temp = temp.trim().replace("\n", "");
             temp.chars().collect()
         },
         None => {
             Vec::<char>::from(DEFAULT_CHARS)
         }
     };
+    println!("{:?}", char_array);
     // output buffer
     let mut output_buff = String::new();
     // cast all matrix entries to characters, then format them and add to buffer
