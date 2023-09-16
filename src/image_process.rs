@@ -4,7 +4,7 @@ use crate::segment::SegmentInfo;
 use crate::matrix::Matrix;
 use crate::kernel::*;
 use crate::ditherer::*;
-use crate::{DithType, InterPoints};
+use crate::{DithType, InterPoints, ThreshOption};
 
 ////////// LEGACY ///////////
 
@@ -43,17 +43,27 @@ pub fn generate_matrix(mut image: GrayImage, matrix: &mut Matrix<f32>){
     }
 }
 
-pub fn apply_transformation(dith_type: &DithType, kernel: Kernel, threshold: f32,
+pub fn apply_transformation(dith_type: &DithType, kernel: Kernel, threshold: ThreshOption,
                             inter_points: InterPoints, chars_cnt: usize, matrix: &mut Matrix<f32>){
 
     match dith_type {
         DithType::INTER => {
             match inter_points{
                 Some(s) => {
+                    if chars_cnt > s.len(){
+                        eprintln!("WARNING: There are more characters in the char sequence than there are interpolation points specified. This can result in unexpectedly low output quality.");
+                    }
                     let ditherer = InterpolatingKernelDitherer::from(s, kernel.origin, kernel.matrix);
                     ditherer.dither(matrix);
                 },
                 None => {
+                    let threshold = match threshold {
+                        Some(s) => s,
+                        None => {
+                            1.0 / (chars_cnt as f32)
+                        }
+                    };
+
                     let space = 1.0 - threshold;
                     let parts = space / ((chars_cnt - 1) as f32);
                     let mut inters: Vec<f32> = Vec::with_capacity(chars_cnt);
@@ -68,6 +78,17 @@ pub fn apply_transformation(dith_type: &DithType, kernel: Kernel, threshold: f32
             }
         },
         DithType::ONOFF => {
+            if chars_cnt != 2 {
+                eprintln!("WARNING: ONOFF ditherer specified but more than 2 characters have been specified. This means that only the first and last characters in the character sequence will be used.");
+            }
+            let threshold = match threshold {
+                Some(s) => s,
+                None => {
+                    eprintln!("WARNING: You should specify a threshold when using an ONOFF ditherer. Threshold=0.5 is assumed.");
+                    0.5
+                }
+            };
+
             let ditherer = OnOffKernelDitherer::from(threshold, kernel.origin, kernel.matrix);
             ditherer.dither(matrix);
         }

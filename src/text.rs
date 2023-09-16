@@ -66,7 +66,6 @@ fn produce_buffer_txt(matrix: Matrix<f32>, char_array: Vec<char>, dith_type: Dit
 fn produce_buffer_braile(matrix: Matrix<f32>, char_array: Vec<char>, output_buff: &mut String) {
     let lx = matrix.get_width() / 2;
     let ly = matrix.get_height() / 4;
-    println!("{},{}", ly, lx);
     for i in 0..ly{
         for j in 0..lx{
             let mut charnum: u32= 10240;

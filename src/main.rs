@@ -42,6 +42,7 @@ pub enum DithType{
     INTER,
 }
 
+pub type ThreshOption = Option<f32>;
 pub type CharsOption = Option<String>;
 pub type OutputFile = Option<File>;
 pub type InterPoints = Option<Vec<f32>>;
@@ -54,7 +55,7 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
                                             SegType,
                                             DithType,
                                             String,
-                                            f32,
+                                            ThreshOption,
                                             String, 
                                             String,
                                             f32,
@@ -65,13 +66,17 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
                                             CharsOption,
                                             InterPoints,
                                             String), ()>{
+
+    let ker_types: Vec<&str> = map_kernel.clone().into_keys().collect();
+    let help_kernel_types = ker_types.join("|");
+
     let progname = args[0].clone();
     let mut parser = Options::new();
     parser.optflag("h", "help", "display this help message");
     parser.opt("t", "type", "type of output", "TXT|BRAILE", HasArg::Yes, Occur::Optional);
     parser.opt("s", "seg-type", "how to segmentate the image", "RESIZE|LEGACY", HasArg::Yes, Occur::Optional);
     parser.opt("d", "dith-type", "type of the ditherer used", "ONOFF|INTERPOLATING", HasArg::Yes, Occur::Optional);
-    parser.opt("k", "kernel", "type of kernel to use in ditherer", "NONE|FS|STUCKI|ATKINSON", HasArg::Yes, Occur::Optional);
+    parser.opt("k", "kernel", "type of kernel to use in ditherer", help_kernel_types.as_str(), HasArg::Yes, Occur::Optional);
     parser.opt("T", "threshold", "cut-off threshold", "FLOAT", HasArg::Yes, Occur::Optional);
     parser.opt("f", "fmt", "format string for each character", "FORMATSTR", HasArg::Yes, Occur::Optional);
     parser.opt("F", "fmtln", "format string for each line", "FORMATSTR", HasArg::Yes, Occur::Optional);
@@ -89,7 +94,7 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
     let mut seg_type: SegType = SegType::LEGACY;
     let mut dith_type: DithType = DithType::INTER;
     let mut ker_type: String = String::from("NONE"); 
-    let mut threshold: f32 = 0.2;
+    let mut threshold: ThreshOption = None;
     let mut fmt_str: String = String::from("{}");
     let mut fmt_ln_str: String = String::from("{}\n");
     let mut contrast: f32 = 0.0;
@@ -110,14 +115,14 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
         let temp: String = match matches.opt_str("t"){
             Some(s) => s,
             None => {
-                println!("-t option expects an argument: TXT | BRAILE");
+                eprintln!("-t option expects an argument: TXT|BRAILE");
                 return Err(());
             }
         }.trim().to_lowercase();
         if temp == "txt" { out_type = ProgType::TXT; }
         else if temp == "braile" { out_type = ProgType::BRAILE; }
         else {
-            println!("-t option expects an argument: TXT | BRAILE");
+            eprintln!("-t option expects an argument: TXT|BRAILE");
             return Err(());
         }
     }
@@ -126,20 +131,20 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
         let temp: String = match matches.opt_str("s"){
             Some(s) => s,
             None => {
-                println!("-s option expects an argument: RESIZE | LEGACY");
+                eprintln!("-s option expects an argument: RESIZE|LEGACY");
                 return Err(());
             }
         }.trim().to_lowercase();
         if temp == "resize" { seg_type = SegType::RESIZE; }
         else if temp == "legacy" { 
             if out_type == ProgType::BRAILE{
-                println!("Illegal Combination of options: cannot use Legacy segmentation for braile output.");
+                eprintln!("Illegal Combination of options: cannot use Legacy segmentation for braile output.");
                 return Err(());
             }
             seg_type = SegType::LEGACY;
         }
         else {
-            println!("-s option expects an argument: RESIZE | LEGACY");
+            eprintln!("-s option expects an argument: RESIZE|LEGACY");
             return Err(());
         }
     }
@@ -148,20 +153,20 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
         let temp: String = match matches.opt_str("d"){
             Some(s) => s,
             None => {
-                println!("-d option expects an argument: ONOFF | INTERPOLATING");
+                eprintln!("-d option expects an argument: ONOFF|INTERPOLATING");
                 return Err(());
             }
         }.trim().to_lowercase();
         if temp == "onoff" { dith_type = DithType::ONOFF; }
         else if temp == "inter" || temp == "interpolating" { 
             if out_type == ProgType::BRAILE{
-                println!("Illegal Combination of options: cannot use interpolating ditherer for braile output.");
+                eprintln!("Illegal Combination of options: cannot use interpolating ditherer for braile output.");
                 return Err(());
             }
             dith_type = DithType::INTER; 
         }
         else {
-            println!("-d option expects an argument: ONOFF | INTERPOLATING");
+            eprintln!("-d option expects an argument: ONOFF|INTERPOLATING");
             return Err(());
         }
     }
@@ -170,14 +175,14 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
         let temp: String = match matches.opt_str("k"){
             Some(s) => s,
             None => {
-                println!("-k option expects an argument: NONE | FS | STUCKI | ATKINSON");
+                eprintln!("-k option expects an argument: {}", help_kernel_types);
                 return Err(());
             }
         }.trim().to_lowercase();
         if map_kernel.contains_key(temp.to_uppercase().as_str()) {
             ker_type = temp.to_uppercase();
         }else{
-            println!("-k option expects an argument: NONE | FS | STUCKI | ATKINSON");
+            eprintln!("-k option expects an argument: {}", help_kernel_types);
             return Err(());
         }
     }
@@ -186,32 +191,32 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
         let temp = match matches.opt_str("T"){
             Some(s) => s,
             None => {
-                println!("-T option expects an argument: FLOAT");
+                eprintln!("-T option expects an argument: FLOAT");
                 return Err(());
             }
         }.parse::<f32>();
 
         threshold = match temp {
-            Ok(s) => s,
+            Ok(s) => ThreshOption::Some(s),
             Err(_) => {
-                println!("the argument given to -T is not a valid FLOAT number.");
+                eprintln!("the argument given to -T is not a valid FLOAT number.");
                 return Err(());
             }
         };
     }
 
     if matches.opt_present("f"){
-        println!("the formatting feature is not implemented yet. Ignoring this option");
+        eprintln!("Formatting features are not implemented yet. Ignoring this option: -f");
     }
     if matches.opt_present("F"){
-        println!("the formatting feature is not implemented yet. Ignoring this option");
+        eprintln!("Formatting features are not implemented yet. Ignoring this option: -F");
     }
 
     if matches.opt_present("c"){
         let temp = match matches.opt_str("c"){
             Some(s) => s,
             None => {
-                println!("-c option expects an argument: FLOAT");
+                eprintln!("-c option expects an argument: FLOAT");
                 return Err(());
             }
         }.parse::<f32>();
@@ -219,7 +224,7 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
         contrast = match temp {
             Ok(s) => s,
             Err(_) => {
-                println!("the argument given to -c is not a valid FLOAT number.");
+                eprintln!("the argument given to -c is not a valid FLOAT number.");
                 return Err(());
             }
         };
@@ -229,7 +234,7 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
         let temp = match matches.opt_str("b"){
             Some(s) => s,
             None => {
-                println!("-b option expects an argument: INTEGER");
+                eprintln!("-b option expects an argument: INTEGER");
                 return Err(());
             }
         }.parse::<i32>();
@@ -237,7 +242,7 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
         brighten = match temp {
             Ok(s) => s,
             Err(_) => {
-                println!("the argument given to -W is not a valid INTEGER.");
+                eprintln!("the argument given to -W is not a valid INTEGER.");
                 return Err(());
             }
         };
@@ -247,7 +252,7 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
         let temp = match matches.opt_str("W"){
             Some(s) => s,
             None => {
-                println!("-W option expects an argument: INTEGER");
+                eprintln!("-W option expects an argument: INTEGER");
                 return Err(());
             }
         }.parse::<u32>();
@@ -255,7 +260,7 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
         width = match temp {
             Ok(s) => s,
             Err(_) => {
-                println!("the argument given to -W is not a valid INTEGER.");
+                eprintln!("the argument given to -W is not a valid INTEGER.");
                 return Err(());
             }
         };
@@ -265,7 +270,7 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
         let temp = match matches.opt_str("H"){
             Some(s) => s,
             None => {
-                println!("-H option expects an argument: INTEGER");
+                eprintln!("-H option expects an argument: INTEGER");
                 return Err(());
             }
         }.parse::<u32>();
@@ -273,7 +278,7 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
         height = match temp {
             Ok(s) => s,
             Err(_) => {
-                println!("the argument given to -H is not a valid INTEGER number.");
+                eprintln!("the argument given to -H is not a valid INTEGER number.");
                 return Err(());
             }
         };
@@ -283,13 +288,13 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
         let temp: String = match matches.opt_str("o"){
             Some(s) => s,
             None => {
-                println!("-o option expects an argument: FILENAME");
+                eprintln!("-o option expects an argument: FILENAME");
                 return Err(());
             }
         };
         let temp_path = Path::new(&temp);
         if temp_path.exists() && !temp_path.is_file() {
-            println!("cannot open {} for writing. File exists and is not a regular file.", temp);
+            eprintln!("cannot open {} for writing. File exists and is not a regular file.", temp);
             return Err(());
         }
         output = Some(File::options().write(true).append(false).create(true).open(temp).expect("unexpected error occured when openning output file"));
@@ -299,7 +304,7 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
         let temp: String = match matches.opt_str("C"){
             Some(s) => s,
             None => {
-                println!("-C option expects an argument: FILENAME");
+                eprintln!("-C option expects an argument: FILENAME");
                 return Err(());
             }
         };
@@ -307,11 +312,11 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
         if temp.chars().nth(0).unwrap() == '@' {
             let temp_path = Path::new(&temp);
             if !temp_path.exists() {
-                println!("cannot open {} for reading: File does not exist.", temp);
+                eprintln!("cannot open {} for reading: File does not exist.", temp);
                 return Err(());
             }
             if temp_path.exists() && !temp_path.is_file() {
-                println!("cannot open {} for reading: File exists and is not a regular file.", temp);
+                eprintln!("cannot open {} for reading: File exists and is not a regular file.", temp);
                 return Err(());
             }
             let mut file = File::options().read(true).open(temp).expect("unexpected error occured when openning chars file");
@@ -324,15 +329,15 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
     }
 
     if matches.opt_present("I"){
-        let temp: String = match matches.opt_str("C"){
+        let temp: String = match matches.opt_str("I"){
             Some(s) => s,
             None => {
-                println!("-I option expects an argument: (FLOAT,)*");
+                eprintln!("-I option expects an argument: (FLOAT,)*");
                 return Err(());
             }
         };
         if dith_type == DithType::ONOFF{
-            println!("Illegal Combination of options: cannot specify interpolation points with OnOff ditherer.");
+            eprintln!("Illegal Combination of options: cannot specify interpolation points with OnOff ditherer.");
             return Err(());
         }
         let parts:Vec<&str> = temp.split(",").collect();
@@ -342,7 +347,7 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
             let num = match part.parse::<f32>(){
                 Ok(s) => s,
                 Err(_) => {
-                    println!("error while parsin interpolating points argument. {} is not a valid float number.", part);
+                    eprintln!("error while parsin interpolating points argument. {} is not a valid float number.", part);
                     return Err(());
                 }
             };
@@ -355,16 +360,16 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
     
 
     if matches.free.len() != 1{
-        println!("WRONG USAGE! See --help for more info");
+        eprintln!("WRONG USAGE! See --help for more info");
         return Err(());
     }
     let temp_path = Path::new(&matches.free[0]);
     if ! temp_path.exists() {
-        println!("cannot open {} for reading. File does not exist.", matches.free[0]);
+        eprintln!("cannot open {} for reading. File does not exist.", matches.free[0]);
         return Err(());
     }
     if temp_path.exists() && !temp_path.is_file() {
-        println!("cannot open {} for reading. File exists and is not a regular file.", matches.free[0]);
+        eprintln!("cannot open {} for reading. File exists and is not a regular file.", matches.free[0]);
         return Err(());
     }
     let input = matches.free[0].clone();
@@ -481,7 +486,7 @@ fn main() {
 fn produce_txt(width: u32, height: u32, dyn_image: DynamicImage, seg_type: SegType,
                   contrast:f32, brighten: i32, chars: CharsOption, fmt_str: String,
                   fmt_ln_str: String, dith_type: DithType, kernel: Kernel,
-                  threshold: f32, inter_points: InterPoints, output: OutputFile){
+                  threshold: ThreshOption, inter_points: InterPoints, output: OutputFile){
 
     let mut matrix = Matrix::<f32>::new(width, height, 0.0);
     match seg_type {
@@ -517,7 +522,7 @@ fn produce_txt(width: u32, height: u32, dyn_image: DynamicImage, seg_type: SegTy
 
 fn produce_braile(width: u32, height: u32, dyn_image: DynamicImage, contrast: f32,
                   brighten: i32, chars: CharsOption, fmt_str: String, fmt_ln_str: String,
-                  kernel: Kernel, threshold: f32, output: OutputFile){
+                  kernel: Kernel, threshold: ThreshOption, output: OutputFile){
     let width = if width % 2 == 0 {width} else {width + 1};
     let height = match height % 4 {
         0 => height,
@@ -537,7 +542,7 @@ fn produce_braile(width: u32, height: u32, dyn_image: DynamicImage, contrast: f3
         .into_luma8();
 
     generate_matrix(stt_image, &mut matrix);
-    apply_transformation(&DithType::ONOFF, kernel, threshold, InterPoints::None, 0 /* not used */, &mut matrix);
+    apply_transformation(&DithType::ONOFF, kernel, threshold, InterPoints::None, 2 /* not used but must be 2 to avoid unwanted warning */, &mut matrix);
     print_output(matrix, fmt_str, fmt_ln_str, chars, ProgType::BRAILE, DithType::ONOFF, output);
 }
 
