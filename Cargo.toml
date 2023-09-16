@@ -1,7 +1,15 @@
 [package]
-name = "img2ascii"
+name = "artyst"
 version = "0.1.0"
 edition = "2021"
+authors = ["Hirad Davari hiradcodes@yahoo.com"]
+license = "GNU GPL v2"
+description = "convert any image into beautiful ascii art."
+readme = "README.md"
+repository = "https://github.com/theAester/aRtySt"
+keywords = ["cli", "ascii-art"]
+categories = ["command-line-utilities"]
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

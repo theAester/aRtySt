@@ -84,7 +84,7 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
     parser.opt("W", "width", "width of the output character matrix", "INTEGER", HasArg::Yes, Occur::Optional);
     parser.opt("H", "height", "width of the output character matrix", "INTEGER", HasArg::Yes, Occur::Optional);
     parser.opt("o", "output", "output file default=stdout", "FILENAME", HasArg::Yes, Occur::Optional);
-    parser.opt("C", "chars", "list of characters to use as output", "FILENAME", HasArg::Yes, Occur::Optional);
+    parser.opt("C", "chars", "list of characters to use as output", "STRING|@FILENAME", HasArg::Yes, Occur::Optional);
     parser.opt("I", "inter-points", "interpolation points", "(FLOAT,)*", HasArg::Yes, Occur::Optional);
 
     let matches = parser.parse(args[1..].into_iter()).unwrap();
@@ -341,10 +341,22 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
         }
         let parts:Vec<&str> = temp.split(",").collect();
         let mut nums = Vec::<f32>::with_capacity(parts.len());
+        let mut previous = -0.00000000000001;
         for part in parts{
             let part = part.trim();
             let num = match part.parse::<f32>(){
-                Ok(s) => s,
+                Ok(s) => {
+                    if s < previous {
+                        eprintln!("Illegal Argument: the list of numbers provided to -I must be in increasing order");
+                        return Err(());
+                    }
+                    if s < 0.0 || s > 1.0 {
+                        eprintln!("Illegal argument: the list on numbers provided to -I must contain only numbers between 0 and 1");
+                        return Err(());
+                    }
+                    previous = s;
+                    s
+                },
                 Err(_) => {
                     eprintln!("error while parsin interpolating points argument. {} is not a valid float number.", part);
                     return Err(());
