@@ -4,7 +4,6 @@ use getopts::{Options, Occur, HasArg};
 use std::path::Path;
 use std::fs::File;
 use std::io::Read;
-use std::collections::HashMap;
 use image::io::Reader as ImageReader;
 use image::imageops::FilterType;
 use image::DynamicImage;
@@ -95,8 +94,8 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
     let mut dith_type: DithType = DithType::INTER;
     let mut ker_type: String = String::from("NONE"); 
     let mut threshold: ThreshOption = None;
-    let mut fmt_str: String = String::from("{}");
-    let mut fmt_ln_str: String = String::from("{}\n");
+    let /* mut */ fmt_str: String = String::from("{}");
+    let /* mut */ fmt_ln_str: String = String::from("{}\n");
     let mut contrast: f32 = 0.0;
     let mut brighten: i32 = 0;
     let mut width: u32 = 0;
@@ -321,7 +320,7 @@ fn parse_args(args: Vec<String>, map_kernel: &KerMap) -> Result<(ProgType,
             }
             let mut file = File::options().read(true).open(temp).expect("unexpected error occured when openning chars file");
             let mut string = String::new();
-            file.read_to_string(&mut string);
+            file.read_to_string(&mut string).unwrap();
             chars = Some(string);
         }else{ // string specified
             chars = Some(temp);
@@ -427,60 +426,6 @@ fn main() {
             produce_braile(width, height, dyn_image, contrast, brighten, chars, fmt_str, fmt_ln_str, kernel, threshold, output);
         }
     }
-/*
-    match seg_type {
-        SegType::LEGACY => {
-            let stt_image = dyn_image
-                .brighten(brighten)
-                .adjust_contrast(contrast)
-                .grayscale()
-                .into_luma8();
-
-            let segment_info = SegmentInfo::generate(stt_image.width(), stt_image.height(), width, height);
-
-            generate_matrix_legacy(stt_image, &mut matrix, segment_info);
-        },
-        SegType::RESIZE => {
-
-            match out_type {
-                ProgType::TXT => {
-                    let mut stt_image = dyn_image
-                        .brighten(brighten)
-                        .adjust_contrast(contrast)
-                        .grayscale()
-                        .resize_exact(width, height, FilterType::Gaussian)
-                        .into_luma8();
-
-                    generate_matrix(stt_image, &mut matrix);
-                },
-                ProgType::BRAILE => {
-                    let width = if width % 2 == 0 {width} else {width + 1};
-                    let height = match height % 4 {
-                        0 => height,
-                        1 => height + 3,
-                        2 => height - 2,
-                        3 => height + 1,
-                        _ => unreachable!()
-                    };
-
-                    let mut matrix = Matrix::<f32>::new(width, height, 0.0);
-
-                    let mut stt_image = dyn_image
-                        .brighten(brighten)
-                        .adjust_contrast(contrast)
-                        .grayscale()
-                        .resize_exact(width, height, FilterType::Gaussian)
-                        .into_luma8();
-
-                    generate_matrix_braile(stt_image, &mut matrix);
-                    print_output(matrix, fmt_str, fmt_ln_str, chars, out_type, output);
-                    return;
-                }
-            }
-        }
-    }
-    print_output(matrix, fmt_str, fmt_ln_str, chars, out_type, output);
-    */
 }
 
 fn produce_txt(width: u32, height: u32, dyn_image: DynamicImage, seg_type: SegType,
@@ -491,7 +436,7 @@ fn produce_txt(width: u32, height: u32, dyn_image: DynamicImage, seg_type: SegTy
     let mut matrix = Matrix::<f32>::new(width, height, 0.0);
     match seg_type {
         SegType::RESIZE => {
-            let mut stt_image = dyn_image
+            let stt_image = dyn_image
                 .brighten(brighten)
                 .adjust_contrast(contrast)
                 .grayscale()
@@ -534,7 +479,7 @@ fn produce_braile(width: u32, height: u32, dyn_image: DynamicImage, contrast: f3
 
     let mut matrix = Matrix::<f32>::new(width, height, 0.0);
 
-    let mut stt_image = dyn_image
+    let stt_image = dyn_image
         .brighten(brighten)
         .adjust_contrast(contrast)
         .grayscale()

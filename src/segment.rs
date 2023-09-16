@@ -1,6 +1,7 @@
 pub struct SegmentInfo{
-    in_width: u32,
-    in_height: u32,
+    // unused
+    //in_width: u32,
+    //in_height: u32,
     out_width: u32,
     out_height: u32,
     w_quotient: u32, 
@@ -18,8 +19,9 @@ impl SegmentInfo{
         let h_remainder = in_height % out_height;
 
         SegmentInfo{
-            in_width: in_width,
-            in_height: in_height,
+            // unused
+            //in_width: in_width,
+            //in_height: in_height,
             out_width: out_width,
             out_height: out_height,
             w_quotient: w_quotient,
@@ -58,6 +60,7 @@ impl SegmentInfo{
     }
     pub fn get_width(&self) -> u32 { self.out_width }
     pub fn get_height(&self) -> u32 { self.out_height }
-    pub fn get_img_width(&self) -> u32 { self.in_width }
-    pub fn get_img_height(&self) -> u32 { self.in_height }
+    // unused
+    //pub fn get_img_width(&self) -> u32 { self.in_width }
+    //pub fn get_img_height(&self) -> u32 { self.in_height }
 }

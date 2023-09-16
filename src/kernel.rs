@@ -12,12 +12,12 @@ pub struct Kernel{
     pub origin: (i32, i32),
 }
 
-//pub enum KerType{
-//    NONE(Kernel),
-//    FS(Kernel),
-//    STUCKI(Kernel),
-//    ATKINSON(Kernel),
-//}
+////////// NOTE FOR CONTRIBUTERS //////////
+//// here you can add new kernels for  ////
+//// dithering algorithms. Just define ////
+//// the kernel and add it to the Hash-////
+////-Map below! easy as that.          ////
+///////////////////////////////////////////
 
 pub fn get_kernels() -> KerMap {
 

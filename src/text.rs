@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::{Write};
 use crate::matrix::Matrix;
 use crate::{ProgType, CharsOption, DithType};
 
@@ -7,7 +7,7 @@ pub const DEFAULT_CHARS_LEN: usize = 39;
 const DEFAULT_CHARS: [char; DEFAULT_CHARS_LEN] = [' ','.','`','\'','-','~','+','^',':',';','>','<','?',')','(','|',']','[','}','{','\\','/',
                                                   'i','1','l','L','0','O','m','q','d','k','#','W','%','&','B','@','$'];
 
-pub fn print_output(matrix: Matrix<f32>, fmt_str: String, fmt_ln_str: String, chars: CharsOption, out_type: ProgType, dith_type: DithType, output: Option<File>){
+pub fn print_output(matrix: Matrix<f32>, _fmt_str: String, _fmt_ln_str: String, chars: CharsOption, out_type: ProgType, dith_type: DithType, output: Option<File>){
     // array of characters, arranged in increasing brightness
     let char_array: Vec<char> = match chars{
         Some(s) => {
@@ -26,7 +26,7 @@ pub fn print_output(matrix: Matrix<f32>, fmt_str: String, fmt_ln_str: String, ch
             produce_buffer_txt(matrix, char_array, dith_type, &mut output_buff);
         },
         ProgType::BRAILE => {
-            produce_buffer_braile(matrix, char_array, &mut output_buff);
+            produce_buffer_braile(matrix, &mut output_buff);
         }
     }
 
@@ -63,7 +63,7 @@ fn produce_buffer_txt(matrix: Matrix<f32>, char_array: Vec<char>, dith_type: Dit
     }
 }
 
-fn produce_buffer_braile(matrix: Matrix<f32>, char_array: Vec<char>, output_buff: &mut String) {
+fn produce_buffer_braile(matrix: Matrix<f32>, output_buff: &mut String) {
     let lx = matrix.get_width() / 2;
     let ly = matrix.get_height() / 4;
     for i in 0..ly{

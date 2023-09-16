@@ -35,10 +35,10 @@ pub fn take_average(image: &GrayImage, x1: u32, x2: u32, y1: u32, y2: u32) -> f3
 ////////// KERNEL ///////////
 
 
-pub fn generate_matrix(mut image: GrayImage, matrix: &mut Matrix<f32>){
+pub fn generate_matrix(image: GrayImage, matrix: &mut Matrix<f32>){
     for x in 0..image.width(){
         for y in 0..image.height(){
-            matrix.set(y, x, (image.get_pixel(x, y).0[0] as f32)/255.0);
+            let _ = matrix.set(y, x, (image.get_pixel(x, y).0[0] as f32)/255.0);
         }
     }
 }
@@ -97,23 +97,24 @@ pub fn apply_transformation(dith_type: &DithType, kernel: Kernel, threshold: Thr
 }
 
 
-pub fn generate_matrix_braile(mut image: GrayImage, matrix: &mut Matrix<f32>){
-    for x in 0..image.width(){
-        for y in 0..image.height(){
-            matrix.set(y, x, (image.get_pixel(x, y).0[0] as f32)/255.0);
-        }
-    }
-    let kernel = Matrix::<f32>::from(vec![
-		0.0,	0.0,    0.125,	0.125,
-		0.125,	0.125,	0.125,	0.0,
-		0.0,    0.125,	0.0,    0.0
-    ], 4, 3);
-    let atkinson_ditherer = OnOffKernelDitherer::from(0.4, (1,0), kernel);
-    atkinson_ditherer.dither(matrix);
-    //for i in 0..matrix.get_height(){
-    //    for j in 0..matrix.get_width(){
-    //        print!("{}", matrix.get(i, j).unwrap());
-    //    }
-    //    println!();
-    //}
-}
+// unused
+//pub fn generate_matrix_braile(mut image: GrayImage, matrix: &mut Matrix<f32>){
+//    for x in 0..image.width(){
+//        for y in 0..image.height(){
+//            matrix.set(y, x, (image.get_pixel(x, y).0[0] as f32)/255.0);
+//        }
+//    }
+//    let kernel = Matrix::<f32>::from(vec![
+//		0.0,	0.0,    0.125,	0.125,
+//		0.125,	0.125,	0.125,	0.0,
+//		0.0,    0.125,	0.0,    0.0
+//    ], 4, 3);
+//    let atkinson_ditherer = OnOffKernelDitherer::from(0.4, (1,0), kernel);
+//    atkinson_ditherer.dither(matrix);
+//    //for i in 0..matrix.get_height(){
+//    //    for j in 0..matrix.get_width(){
+//    //        print!("{}", matrix.get(i, j).unwrap());
+//    //    }
+//    //    println!();
+//    //}
+//}

@@ -27,9 +27,10 @@ impl OnOffKernelDitherer{
         }
         OnOffKernelDitherer{ threshold, weights }
     }
-    pub fn new(threshold: f32, weights: Vec<(i32, i32, f32)>) -> OnOffKernelDitherer {
-        OnOffKernelDitherer{ threshold, weights }
-    }
+    // unused
+    //pub fn new(threshold: f32, weights: Vec<(i32, i32, f32)>) -> OnOffKernelDitherer {
+    //    OnOffKernelDitherer{ threshold, weights }
+    //}
 }
 
 impl InterpolatingKernelDitherer {
@@ -51,17 +52,18 @@ impl InterpolatingKernelDitherer {
         mid_points.push((1.0 - start) / 2.0);
         InterpolatingKernelDitherer{ inter_points, mid_points, weights }
     }
-    pub fn new(inter_points: Vec<f32>, weights: Vec<(i32, i32, f32)>) -> InterpolatingKernelDitherer {
-        let mut start = 0.0;
-        let mut mid_points: Vec<f32> = Vec::with_capacity(inter_points.len());
-        for i in 1..inter_points.len(){
-            let mid = (inter_points[i] + start) / 2.0;
-            mid_points.push(mid); 
-            start = inter_points[i];
-        }
-        mid_points.push((1.0 - start) / 2.0);
-        InterpolatingKernelDitherer{ inter_points, mid_points, weights }
-    }
+    // unused
+    //pub fn new(inter_points: Vec<f32>, weights: Vec<(i32, i32, f32)>) -> InterpolatingKernelDitherer {
+    //    let mut start = 0.0;
+    //    let mut mid_points: Vec<f32> = Vec::with_capacity(inter_points.len());
+    //    for i in 1..inter_points.len(){
+    //        let mid = (inter_points[i] + start) / 2.0;
+    //        mid_points.push(mid); 
+    //        start = inter_points[i];
+    //    }
+    //    mid_points.push((1.0 - start) / 2.0);
+    //    InterpolatingKernelDitherer{ inter_points, mid_points, weights }
+    //}
 }
 
 impl Ditherer for OnOffKernelDitherer {
@@ -71,7 +73,10 @@ impl Ditherer for OnOffKernelDitherer {
             for x in 0..output.get_width(){
                 let val_origi = input.get(y, x).unwrap();
                 let val_trans = if val_origi > self.threshold { 1.0 }else{ 0.0 };
-                output.set(y, x, val_trans);
+                output.set(y, x, val_trans).expect("Unexpected error"); // it is unexpected because
+                                                                        // x and y are defined to
+                                                                        // be within the bounds of
+                                                                        // matrix dimensions.
                 let error = val_origi - val_trans;
                 for (off_x, off_y, factor) in &self.weights{
                     if *factor == 0.0 {continue;}
@@ -83,7 +88,10 @@ impl Ditherer for OnOffKernelDitherer {
                         nx.try_into().unwrap())
                         .unwrap_or(-1.0);
                     if val == -1.0 {continue;}
-                    input.set(ny.try_into().unwrap(), nx.try_into().unwrap(), val + error * factor);
+                    let _ = input.set(ny.try_into().unwrap(), nx.try_into().unwrap(), val + error * factor);
+                    // Since nx and ny have an offset, out of bound access is almost bound to happen.
+                    // We ignore Err result because Matrix<T>::get and Matrix::set automatically refuse 
+                    // to touch out of bound locations. 
                 }
             }
         }
@@ -110,7 +118,11 @@ impl Ditherer for InterpolatingKernelDitherer {
 
                 let val_trans = transform;
 
-                output.set(y, x, index as f32);
+                output.set(y, x, index as f32).expect("Unexpected error."); // it is unexpected
+                                                                            // because x and y are
+                                                                            // defined to be within
+                                                                            // the bounds of matrix
+                                                                            // dimensions.
                 let error = val_origi - val_trans;
                 for (off_x, off_y, factor) in &self.weights{
                     if *factor == 0.0 {continue;}
@@ -122,7 +134,10 @@ impl Ditherer for InterpolatingKernelDitherer {
                         nx.try_into().unwrap())
                         .unwrap_or(-1.0);
                     if val == -1.0 {continue;}
-                    input.set(ny.try_into().unwrap(), nx.try_into().unwrap(), val + error * factor);
+                    let _ = input.set(ny.try_into().unwrap(), nx.try_into().unwrap(), val + error * factor); 
+                    // Since nx and ny have an offset, out of bound access is almost bound to happen.
+                    // We ignore Err result because Matrix<T>::get and Matrix::set automatically refuse 
+                    // to touch out of bound locations. 
                 }
             }
         }
