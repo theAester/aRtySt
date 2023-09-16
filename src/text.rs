@@ -1,35 +1,35 @@
 use std::fs::File;
 use std::io::{Read, Write};
 use crate::matrix::Matrix;
+use crate::{ProgType, CharsOption, DithType};
 
-pub fn print_output(matrix: Matrix<f32>, fmt_str: String, fmt_ln_str: String, chars: Option<File>, output: Option<File>){
+pub const DEFAULT_CHARS_LEN: usize = 39;
+const DEFAULT_CHARS: [char; DEFAULT_CHARS_LEN] = [' ','.','`','\'','-','~','+','^',':',';','>','<','?',')','(','|',']','[','}','{','\\','/',
+                                                  'i','1','l','L','0','O','m','q','d','k','#','W','%','&','B','@','$'];
+
+pub fn print_output(matrix: Matrix<f32>, fmt_str: String, fmt_ln_str: String, chars: CharsOption, out_type: ProgType, dith_type: DithType, output: Option<File>){
     // array of characters, arranged in increasing brightness
     let char_array: Vec<char> = match chars{
-        Some(mut f)=>{
-            let mut temp = String::new();
-            f.read_to_string(&mut temp).unwrap();
-            let temp = temp.trim().replace("\n", "");
+        Some(s) => {
+            let temp = s.trim().replace("\n", "");
             temp.chars().collect()
-        },
+        }
         None => {
             Vec::<char>::from(DEFAULT_CHARS)
         }
     };
-    println!("{:?}", char_array);
     // output buffer
     let mut output_buff = String::new();
-    // cast all matrix entries to characters, then format them and add to buffer
-    for i in 0..matrix.get_height(){
-        for j in 0..matrix.get_width(){
-            let val = matrix.get(i, j).unwrap();
-            let index = (val * (char_array.len() as f32)).floor() as usize;
-            let index = if index == char_array.len() {char_array.len() - 1} else {index};
-            let out_char = char_array[index];
-            output_buff.push(out_char);
-            output_buff.push(out_char);
+
+    match out_type{
+        ProgType::TXT => {
+            produce_buffer_txt(matrix, char_array, dith_type, &mut output_buff);
+        },
+        ProgType::BRAILE => {
+            produce_buffer_braile(matrix, char_array, &mut output_buff);
         }
-        output_buff.push('\n');
     }
+
     // select output and write
     match output {
         Some(mut f) => {
@@ -39,4 +39,43 @@ pub fn print_output(matrix: Matrix<f32>, fmt_str: String, fmt_ln_str: String, ch
             println!("{}", output_buff);
         }
     };
+}
+
+fn produce_buffer_txt(matrix: Matrix<f32>, char_array: Vec<char>, dith_type: DithType, output_buff: &mut String) {
+    // cast all matrix entries to characters, then format them and add to buffer
+    for i in 0..matrix.get_height(){
+        for j in 0..matrix.get_width(){
+            let val = matrix.get(i, j).unwrap();
+            let index: usize = match dith_type {
+                DithType::ONOFF => {
+                    (val * (char_array.len() as f32)).floor() as usize
+                },
+                DithType::INTER => {
+                    val as usize 
+                }
+            };
+            let index = if index == char_array.len() {char_array.len() - 1} else {index};
+            let out_char = char_array[index];
+            output_buff.push(out_char);
+            output_buff.push(out_char);
+        }
+        output_buff.push('\n');
+    }
+}
+
+fn produce_buffer_braile(matrix: Matrix<f32>, char_array: Vec<char>, output_buff: &mut String) {
+    let lx = matrix.get_width() / 2;
+    let ly = matrix.get_height() / 4;
+    println!("{},{}", ly, lx);
+    for i in 0..ly{
+        for j in 0..lx{
+            let mut charnum: u32= 10240;
+            let passes = [(0,0,0), (0,1,1), (0,2,2), (1,0,3), (1,1,4), (1,2,5), (0,3,6), (1,3,7)];
+            for (dx, dy, shift) in passes{
+                charnum += (matrix.get(4*i + dy , 2*j + dx).unwrap() as u32) << shift;
+            }
+            output_buff.push(char::from_u32(charnum).unwrap());
+        }
+        output_buff.push('\n');
+    }
 }

@@ -2,6 +2,11 @@
 use image::{GrayImage};
 use crate::segment::SegmentInfo;
 use crate::matrix::Matrix;
+use crate::kernel::*;
+use crate::ditherer::*;
+use crate::{DithType, InterPoints};
+
+////////// LEGACY ///////////
 
 pub fn generate_matrix_legacy(image: GrayImage, matrix: &mut Matrix<f32>, segment_info: SegmentInfo){
     for i in 0..segment_info.get_height(){
@@ -27,10 +32,67 @@ pub fn take_average(image: &GrayImage, x1: u32, x2: u32, y1: u32, y2: u32) -> f3
     return temp / 255.0; // a number between 0 and 1
 }
 
-pub fn generate_matrix(image: GrayImage, matrix: &mut Matrix<f32>){
+////////// KERNEL ///////////
+
+
+pub fn generate_matrix(mut image: GrayImage, matrix: &mut Matrix<f32>){
     for x in 0..image.width(){
         for y in 0..image.height(){
             matrix.set(y, x, (image.get_pixel(x, y).0[0] as f32)/255.0);
         }
     }
+}
+
+pub fn apply_transformation(dith_type: &DithType, kernel: Kernel, threshold: f32,
+                            inter_points: InterPoints, chars_cnt: usize, matrix: &mut Matrix<f32>){
+
+    match dith_type {
+        DithType::INTER => {
+            match inter_points{
+                Some(s) => {
+                    let ditherer = InterpolatingKernelDitherer::from(s, kernel.origin, kernel.matrix);
+                    ditherer.dither(matrix);
+                },
+                None => {
+                    let space = 1.0 - threshold;
+                    let parts = space / ((chars_cnt - 1) as f32);
+                    let mut inters: Vec<f32> = Vec::with_capacity(chars_cnt);
+                    inters.push(0.0);
+                    inters.push(threshold);
+                    for i in 1..(chars_cnt-1){
+                        inters.push(threshold + (i as f32) * parts); 
+                    }
+                    let ditherer = InterpolatingKernelDitherer::from(inters, kernel.origin, kernel.matrix);
+                    ditherer.dither(matrix);
+                }
+            }
+        },
+        DithType::ONOFF => {
+            let ditherer = OnOffKernelDitherer::from(threshold, kernel.origin, kernel.matrix);
+            ditherer.dither(matrix);
+        }
+    }
+    
+}
+
+
+pub fn generate_matrix_braile(mut image: GrayImage, matrix: &mut Matrix<f32>){
+    for x in 0..image.width(){
+        for y in 0..image.height(){
+            matrix.set(y, x, (image.get_pixel(x, y).0[0] as f32)/255.0);
+        }
+    }
+    let kernel = Matrix::<f32>::from(vec![
+		0.0,	0.0,    0.125,	0.125,
+		0.125,	0.125,	0.125,	0.0,
+		0.0,    0.125,	0.0,    0.0
+    ], 4, 3);
+    let atkinson_ditherer = OnOffKernelDitherer::from(0.4, (1,0), kernel);
+    atkinson_ditherer.dither(matrix);
+    //for i in 0..matrix.get_height(){
+    //    for j in 0..matrix.get_width(){
+    //        print!("{}", matrix.get(i, j).unwrap());
+    //    }
+    //    println!();
+    //}
 }
