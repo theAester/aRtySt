@@ -11,8 +11,14 @@ pub fn print_output(matrix: Matrix<f32>, _fmt_str: String, _fmt_ln_str: String, 
     // array of characters, arranged in increasing brightness
     let char_array: Vec<char> = match chars{
         Some(s) => {
+            let mut starts_with_space = false;
+            if s.chars().nth(0).unwrap() == ' ' {starts_with_space = true;}
             let temp = s.trim().replace("\n", "");
-            temp.chars().collect()
+            let mut temp: Vec<char> = temp.chars().collect();
+            if starts_with_space {
+                temp.insert(0, ' ');
+            }
+            temp
         }
         None => {
             Vec::<char>::from(DEFAULT_CHARS)
