@@ -1,10 +1,10 @@
 
-use image::{GrayImage};
+use imageproc::image::{GrayImage};
 use crate::segment::SegmentInfo;
 use crate::matrix::Matrix;
 use crate::kernel::*;
 use crate::ditherer::*;
-use crate::{DithType, InterPoints, ThreshOption};
+use crate::{DithType, InterPoints, ThreshOption, meprintln};
 
 ////////// LEGACY ///////////
 
@@ -51,7 +51,7 @@ pub fn apply_transformation(dith_type: &DithType, kernel: Kernel, threshold: Thr
             match inter_points{
                 Some(s) => {
                     if chars_cnt > s.len(){
-                        eprintln!("WARNING: There are more characters in the char sequence than there are interpolation points specified. This can result in unexpectedly low output quality.");
+                        meprintln!("WARNING: There are more characters in the char sequence than there are interpolation points specified. This can result in unexpectedly low output quality.");
                     }
                     let ditherer = InterpolatingKernelDitherer::from(s, kernel.origin, kernel.matrix);
                     ditherer.dither(matrix);
@@ -79,12 +79,12 @@ pub fn apply_transformation(dith_type: &DithType, kernel: Kernel, threshold: Thr
         },
         DithType::ONOFF => {
             if chars_cnt != 2 {
-                eprintln!("WARNING: ONOFF ditherer specified but more than 2 characters have been specified. This means that only the first and last characters in the character sequence will be used.");
+                meprintln!("WARNING: ONOFF ditherer specified but more than 2 characters have been specified. This means that only the first and last characters in the character sequence will be used.");
             }
             let threshold = match threshold {
                 Some(s) => s,
                 None => {
-                    eprintln!("WARNING: You should specify a threshold when using an ONOFF ditherer. Threshold=0.5 is assumed.");
+                    meprintln!("WARNING: You should specify a threshold when using an ONOFF ditherer. Threshold=0.5 is assumed.");
                     0.5
                 }
             };
